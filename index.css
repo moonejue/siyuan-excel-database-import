@@ -1,0 +1,12 @@
+.moon-excel-host { position: relative; }
+.moon-excel-launcher {
+  position: absolute; top: 8px; right: 112px; z-index: 4;
+  padding: 4px 9px; border-radius: 14px;
+  background: var(--b3-theme-background); color: var(--b3-theme-primary);
+}
+.moon-excel { display: grid; gap: 12px; }
+.moon-excel [data-status], .moon-excel [data-preview] { color: var(--b3-theme-on-surface-light); font-size: 12px; }
+.moon-excel .error { color: var(--b3-card-error-color); }
+.moon-excel [data-mapping] { display: grid; gap: 8px; }
+.moon-excel-map { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(180px, 1fr) minmax(120px, 1fr); gap: 8px; align-items: center; }
+.moon-excel-map input, .moon-excel-map select { min-width: 0; }
