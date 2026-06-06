@@ -1,4 +1,4 @@
-[简体中文](README_zh_CN.md)
+[简体中文](https://github.com/moonejue/siyuan-excel-database-import/blob/main/README_zh_CN.md)
 
 # Excel Database Import
 

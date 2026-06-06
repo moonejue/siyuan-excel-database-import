@@ -2,7 +2,7 @@
 
 const { Dialog, Plugin, showMessage } = require("siyuan");
 const NAME = "siyuan-excel-database-import";
-const VERSION = "1.1.0";
+const VERSION = "1.1.1";
 const DB = '[data-type="NodeAttributeView"][data-av-id], .av[data-av-id]';
 const TYPES = new Set(["block", "text", "number", "select", "mSelect", "checkbox", "url", "email", "phone"]);
 
@@ -28,7 +28,7 @@ const read = (file, method) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(reader.error || new Error("文件读取失败"));
+    reader.onerror = () => reject(reader.error || new Error("file read failed"));
     reader[method](file);
   });
 
@@ -62,7 +62,7 @@ async function getWorkbook(file) {
 
 function table(grid) {
   const width = Math.max(0, ...grid.map((row) => row.length));
-  const headers = Array.from({ length: width }, (_, i) => String(grid[0]?.[i] ?? "").trim() || `未命名列 ${i + 1}`);
+  const headers = Array.from({ length: width }, (_, i) => String(grid[0]?.[i] ?? "").trim() || `__unnamed_${i + 1}`);
   const rows = grid.slice(1).map((row) => headers.map((_, i) => row[i] ?? "")).filter((row) => row.some((cell) => String(cell).trim()));
   return { headers, rows };
 }
@@ -73,8 +73,8 @@ function databases() {
   return [...result].map(([avID, element]) => ({ avID, element }));
 }
 
-function options(columns, selected) {
-  return `<option value="">跳过</option><option value="new"${selected === "new" ? " selected" : ""}>新建文本字段</option>${columns
+function options(columns, selected, t) {
+  return `<option value="">${t("skip")}</option><option value="new"${selected === "new" ? " selected" : ""}>${t("newTextColumn")}</option>${columns
     .filter((column) => TYPES.has(column.type))
     .map((column) => `<option value="${column.id}"${selected === column.id ? " selected" : ""}>${html(column.name)} · ${column.type}</option>`)
     .join("")}`;
@@ -94,7 +94,11 @@ function value(column, raw) {
 
 class ExcelImport extends Plugin {
   onload() {
-    this.addTopBar({ icon: "iconDownload", title: "Excel 导入数据库", callback: () => this.open() });
+    this.t = (key, ...args) => {
+      const text = this.i18n?.[key] || key;
+      return args.reduce((value, arg, index) => value.replace(`{${index}}`, arg), text);
+    };
+    this.addTopBar({ icon: "iconDownload", title: this.t("title"), callback: () => this.open() });
     this.observer = new MutationObserver(() => this.decorate());
     this.observer.observe(document.body, { childList: true, subtree: true });
     this.decorate();
@@ -112,7 +116,7 @@ class ExcelImport extends Plugin {
       root.classList.add("moon-excel-host");
       const button = document.createElement("button");
       button.className = "moon-excel-launcher b3-button b3-button--outline";
-      button.textContent = "⇩ Excel 导入";
+      button.textContent = this.t("button");
       button.onclick = (event) => (event.stopPropagation(), this.panel(avID));
       root.appendChild(button);
     });
@@ -121,20 +125,20 @@ class ExcelImport extends Plugin {
   open() {
     const list = databases();
     if (list.length === 1) return this.panel(list[0].avID);
-    showMessage(list.length ? "请点击目标数据库右上角的 Excel 导入" : "请先打开包含数据库的文档");
+    showMessage(list.length ? this.t("selectTargetDatabase") : this.t("openDatabaseFirst"));
   }
 
   async panel(avID) {
     const database = await post("/api/av/renderAttributeView", { id: avID, pageSize: -1 });
     const dialog = new Dialog({
-      title: "Excel 导入数据库",
+      title: this.t("title"),
       width: "900px",
       content: `<div class="b3-dialog__content moon-excel">
-        <strong>${html(database.name || "未命名数据库")}</strong>
+        <strong>${html(database.name || this.t("unnamedDatabase"))}</strong>
         <input type="file" accept=".csv,.xlsx,.xls" data-file>
-        <select class="b3-select fn__block" data-sheet disabled><option>请先选择文件</option></select>
+        <select class="b3-select fn__block" data-sheet disabled><option>${this.t("selectFileFirst")}</option></select>
         <span data-status></span><div data-mapping></div><div data-preview></div>
-        <button class="b3-button b3-button--text fn__none" data-import>开始导入</button>
+        <button class="b3-button b3-button--text fn__none" data-import>${this.t("import")}</button>
       </div>`,
     });
     const root = dialog.element.querySelector(".moon-excel");
@@ -144,28 +148,29 @@ class ExcelImport extends Plugin {
 
     const render = () => {
       data = table(book.rows[$("[data-sheet]").value]);
-      if (!data.headers.length) throw new Error("工作表为空");
+      if (!data.headers.length) throw new Error(this.t("emptySheet"));
       $("[data-mapping]").innerHTML = data.headers.map((header, index) => {
         const match = database.view.columns.find((column) => column.name === header);
         const selected = match?.id || (index ? "new" : database.view.columns[0]?.id);
-        return `<label class="moon-excel-map">${html(header)} → <select data-map>${options(database.view.columns, selected)}</select>
-          <input data-name value="${html(header)}"${selected === "new" ? "" : " hidden"}></label>`;
+        const title = header.startsWith("__unnamed_") ? `${this.t("unnamedColumn")} ${header.slice(10)}` : header;
+        return `<label class="moon-excel-map">${html(title)} → <select data-map>${options(database.view.columns, selected, this.t)}</select>
+          <input data-name value="${html(title)}"${selected === "new" ? "" : " hidden"}></label>`;
       }).join("");
       root.querySelectorAll("[data-map]").forEach((select) => (select.onchange = () => (select.nextElementSibling.hidden = select.value !== "new")));
-      $("[data-preview]").textContent = `${data.rows.length} 行数据待导入`;
+      $("[data-preview]").textContent = `${data.rows.length} ${this.t("rowsReady")}`;
       $("[data-import]").classList.remove("fn__none");
     };
 
     $("[data-file]").onchange = async (event) => {
       try {
-        status("正在读取...");
+        status(this.t("reading"));
         book = await getWorkbook(event.target.files[0]);
         $("[data-sheet]").innerHTML = book.sheets.map((name) => `<option>${html(name)}</option>`).join("");
         $("[data-sheet]").disabled = false;
         render();
-        status("读取成功");
+        status(this.t("readSuccess"));
       } catch (error) {
-        status(`读取失败：${error.message}`, true);
+        status(`${this.t("readFailed")}: ${error.message}`, true);
       }
     };
     $("[data-sheet]").onchange = render;
@@ -183,18 +188,18 @@ class ExcelImport extends Plugin {
             columns.push(column); maps.push({ index, column });
           } else maps.push({ index, column: columns.find((column) => column.id === target) });
         }
-        if (!maps.some((map) => map.column.id === columns[0].id)) throw new Error("必须映射主键");
+        if (!maps.some((map) => map.column.id === columns[0].id)) throw new Error(this.t("primaryRequired"));
         const rows = data.rows
           .map((row) => maps.map((map) => value(map.column, row[map.index])))
           .filter((row) => row.find((cell) => cell.keyID === columns[0].id)?.block?.content);
         for (let i = 0; i < rows.length; i += 100) {
-          status(`正在导入 ${Math.min(i + 100, rows.length)} / ${rows.length}`);
+          status(`${this.t("importing")} ${Math.min(i + 100, rows.length)} / ${rows.length}`);
           await post("/api/av/appendAttributeViewDetachedBlocksWithValues", { avID, blocksValues: rows.slice(i, i + 100) });
         }
-        status(`完成：已导入 ${rows.length} 行`);
-        showMessage(`已导入 ${rows.length} 行`);
+        status(`${this.t("done")}: ${this.t("imported")} ${rows.length} ${this.t("rows")}`);
+        showMessage(`${this.t("imported")} ${rows.length} ${this.t("rows")}`);
       } catch (error) {
-        status(`导入失败：${error.message}`, true);
+        status(`${this.t("importFailed")}: ${error.message}`, true);
       }
     };
   }

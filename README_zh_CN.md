@@ -28,7 +28,7 @@
 
 如果这个插件节省了你的时间，欢迎通过赞赏支持后续维护。
 
-![赞赏码](assets/reward.png)
+![赞赏码](https://github.com/moonejue/siyuan-excel-database-import/raw/main/assets/reward.png)
 
 ## 第三方组件
 

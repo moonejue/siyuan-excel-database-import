@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.1
+
+- Disable plugin in publish mode.
+- Use absolute README links for marketplace review.
+- Add English and Chinese UI localization.
+- Update license author.
+
 ## 1.1.0
 
 - Support CSV, XLSX, and XLS imports.
