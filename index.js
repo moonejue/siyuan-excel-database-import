@@ -2,7 +2,7 @@
 
 const { Dialog, Plugin, showMessage } = require("siyuan");
 const NAME = "siyuan-excel-database-import";
-const VERSION = "1.1.1";
+const VERSION = "1.1.2";
 const DB = '[data-type="NodeAttributeView"][data-av-id], .av[data-av-id]';
 const TYPES = new Set(["block", "text", "number", "select", "mSelect", "checkbox", "url", "email", "phone"]);
 
