@@ -4,6 +4,8 @@
 
 Import `.csv`, `.xlsx`, or `.xls` files directly into a SiYuan database.
 
+The logo follows the Moon Teacher brand style: moon-white, misty sage, warm gold, soft contrast, and generous breathing room.
+
 ## Features
 
 - Open the importer from the top-right corner of a database.
